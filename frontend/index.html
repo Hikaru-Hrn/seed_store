@@ -19,6 +19,8 @@
     <main class="container mx-auto mt-8 p-4">
         <h2 class="text-xl font-bold text-gray-800 mb-6">Каталог товаров</h2>
         <div id="catalog" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+
+        <div id="pagination" class="flex justify-center items-center mt-10 space-x-4"></div>
     </main>
 
     <div id="cart-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center">
@@ -38,11 +40,23 @@
     </div>
 
     <script>
-        let cart = [];
+        let currentPage = 1;
+        const limit = 18; // Количество товаров на одной странице
+        let totalPages = 1;
 
-        async function loadProducts() {
-            const res = await fetch('/api/products/');
+        async function loadProducts(page = 1) {
+            currentPage = page;
+            const skip = (page - 1) * limit;
+
+            // 1. Получаем общее количество товаров для расчета страниц
+            const countRes = await fetch('/api/products/count');
+            const countData = await countRes.json();
+            totalPages = Math.ceil(countData.total / limit);
+
+            // 2. Получаем товары для текущей страницы
+            const res = await fetch(`/api/products/?skip=${skip}&limit=${limit}`);
             const products = await res.json();
+
             const catalog = document.getElementById('catalog');
             catalog.innerHTML = '';
 
@@ -66,6 +80,34 @@
                     </div>
                 `;
             });
+
+            // 3. Отрисовываем кнопки страниц
+            renderPagination();
+        }
+
+        // Функция отрисовки кнопок "Вперед / Назад"
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) return; // Если страница всего одна, кнопки не нужны
+
+            // Кнопка "Назад"
+            if (currentPage > 1) {
+                pagination.innerHTML += `<button onclick="loadProducts(${currentPage - 1})" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold transition-colors">← Назад</button>`;
+            } else {
+                pagination.innerHTML += `<button disabled class="px-4 py-2 bg-gray-300 text-gray-500 rounded font-bold cursor-not-allowed">← Назад</button>`;
+            }
+
+            // Номер страницы
+            pagination.innerHTML += `<span class="font-bold text-gray-700">Страница ${currentPage} из ${totalPages}</span>`;
+
+            // Кнопка "Вперед"
+            if (currentPage < totalPages) {
+                pagination.innerHTML += `<button onclick="loadProducts(${currentPage + 1})" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold transition-colors">Вперед →</button>`;
+            } else {
+                pagination.innerHTML += `<button disabled class="px-4 py-2 bg-gray-300 text-gray-500 rounded font-bold cursor-not-allowed">Вперед →</button>`;
+            }
         }
 
         function addToCart(id, title, price) {

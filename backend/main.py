@@ -55,6 +55,12 @@ def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)
 def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.Product).offset(skip).limit(limit).all()
 
+# Эндпоинт для получения общего количества товаров (для пагинации)
+@app.get("/api/products/count")
+def count_products(db: Session = Depends(get_db)):
+    total = db.query(models.Product).count()
+    return {"total": total}
+
 
 @app.delete("/api/products/{product_id}")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
