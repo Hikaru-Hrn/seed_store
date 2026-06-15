@@ -31,10 +31,10 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">Ваша корзина</h2>
-                <button onclick="toggleCart()" class="text-red-500 hover:text-red-700 font-bold text-3xl">&times;</button>
+                <button onclick="toggleCart()" class="text-gray-400 hover:text-red-600 transition font-bold text-3xl">&times;</button>
             </div>
 
-            <ul id="cart-items" class="mb-4 space-y-2 border-b pb-4 overflow-y-auto flex-1"></ul>
+            <ul id="cart-items" class="mb-4 space-y-2 border-b pb-4 overflow-y-auto flex-1 pr-2 scrollbar-thin"></ul>
             <p class="font-bold text-xl mb-4 text-right text-green-700">Итого: <span id="cart-total">0</span> руб.</p>
 
             <div class="space-y-3 mt-auto">
@@ -47,28 +47,22 @@
 
     <script>
         let cart = [];
-        // Глобальная переменная для хранения текущих товаров на странице
         window.currentStoreProducts = [];
 
         let currentPage = 1;
-        const limit = 12; // Количество товаров на одной странице
+        const limit = 12;
         let totalPages = 1;
 
-        // 1. Загрузка товаров из базы
         async function loadProducts(page = 1) {
             currentPage = page;
             const skip = (page - 1) * limit;
 
             try {
-                // Получаем количество товаров
                 const countRes = await fetch('/api/products/count');
                 const countData = await countRes.json();
                 totalPages = Math.ceil(countData.total / limit);
 
-                // Получаем сами товары
                 const res = await fetch(`/api/products/?skip=${skip}&limit=${limit}`);
-
-                // СОХРАНЯЕМ ТОВАРЫ ГЛОБАЛЬНО
                 window.currentStoreProducts = await res.json();
 
                 const catalog = document.getElementById('catalog');
@@ -80,7 +74,6 @@
 
                 window.currentStoreProducts.forEach(p => {
                     const img = p.image_url ? p.image_url : 'https://via.placeholder.com/300x200?text=Нет+фото';
-                    // Экранируем кавычки только для HTML атрибута alt
                     const safeAlt = p.title.replace(/"/g, '&quot;');
 
                     catalog.innerHTML += `
@@ -88,7 +81,7 @@
                             <div>
                                 <img src="${img}" alt="${safeAlt}" class="w-full h-48 object-cover rounded-lg mb-4 border">
                                 <h3 class="text-lg font-bold text-gray-800 leading-tight">${p.title}</h3>
-                                <p class="text-gray-500 text-sm mt-2 h-16 overflow-y-auto pr-1 text-justify scrollbar-thin">${p.description}</p>
+                                <p class="text-gray-500 text-sm mt-2 h-16 overflow-y-auto pr-1 text-justify">${p.description}</p>
                                 <p class="text-green-600 font-extrabold text-2xl mt-4">${p.price} ₽</p>
                                 <p class="text-xs font-semibold ${p.stock_quantity > 0 ? 'text-gray-500' : 'text-red-500'} mt-1">
                                     ${p.stock_quantity > 0 ? `В наличии: ${p.stock_quantity} шт.` : 'Нет в наличии'}
@@ -105,13 +98,12 @@
                 });
 
                 renderPagination();
-                window.scrollTo({ top: 0, behavior: 'smooth' }); // Возвращаем скролл наверх
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
             }
         }
 
-        // 2. Отрисовка кнопок пагинации
         function renderPagination() {
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
@@ -133,16 +125,13 @@
             }
         }
 
-        // 3. Логика корзины
         function addToCart(id) {
-            // Ищем товар в массиве, который мы скачали с сервера
             const product = window.currentStoreProducts.find(p => p.id === id);
             if (!product) return;
 
             const qtyInput = document.getElementById(`qty-${id}`);
             const qty = parseInt(qtyInput.value);
 
-            // Проверки
             if (qty > product.stock_quantity) {
                 alert(`Доступно только ${product.stock_quantity} шт.!`);
                 qtyInput.value = product.stock_quantity;
@@ -157,13 +146,11 @@
                 }
                 existing.quantity += qty;
             } else {
-                // Берем название и цену из найденного объекта product
                 cart.push({ product_id: id, title: product.title, price: product.price, quantity: qty });
             }
 
             updateCartUI();
 
-            // Маленький визуальный эффект кнопки
             const btn = qtyInput.nextElementSibling;
             const originalText = btn.innerText;
             btn.innerText = "✓ Добавлено";
@@ -176,6 +163,13 @@
             }, 1000);
         }
 
+        // НОВАЯ ФУНКЦИЯ: Удаление товара из корзины
+        function removeFromCart(id) {
+            // Оставляем в корзине только те товары, ID которых не совпадает с удаляемым
+            cart = cart.filter(item => item.product_id !== id);
+            updateCartUI();
+        }
+
         function updateCartUI() {
             document.getElementById('cart-count').innerText = cart.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -185,23 +179,35 @@
 
             cart.forEach(item => {
                 total += item.price * item.quantity;
+                // Добавлена кнопка удаления (крестик) в правую часть элемента списка
                 list.innerHTML += `
-                <li class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded border">
+                <li class="flex justify-between items-center text-sm p-2 bg-gray-50 rounded border group">
                     <div class="flex-1 pr-2">
                         <span class="font-bold text-gray-800">${item.title}</span>
                         <div class="text-xs text-gray-500">${item.price} ₽ x ${item.quantity} шт.</div>
                     </div>
-                    <span class="font-extrabold text-green-700 whitespace-nowrap">${item.price * item.quantity} ₽</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-extrabold text-green-700 whitespace-nowrap">${item.price * item.quantity} ₽</span>
+                        <button onclick="removeFromCart(${item.product_id})" title="Удалить из корзины" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
                 </li>`;
             });
             document.getElementById('cart-total').innerText = total;
+
+            // Если корзина пуста, выводим сообщение
+            if (cart.length === 0) {
+                list.innerHTML = '<li class="text-center text-gray-500 py-4">Корзина пока пуста</li>';
+            }
         }
 
         function toggleCart() {
             document.getElementById('cart-modal').classList.toggle('hidden');
         }
 
-        // 4. Отправка заказа
         async function submitOrder() {
             if (cart.length === 0) return alert('Корзина пуста!');
             const name = document.getElementById('customer-name').value.trim();
@@ -231,13 +237,12 @@
                 toggleCart();
                 document.getElementById('customer-name').value = '';
                 document.getElementById('customer-phone').value = '';
-                loadProducts(currentPage); // Обновляем текущую страницу для актуализации остатков
+                loadProducts(currentPage);
             } else {
                 alert('Ошибка при оформлении заказа. Возможно, товар закончился.');
             }
         }
 
-        // Старт!
         loadProducts();
     </script>
 </body>
