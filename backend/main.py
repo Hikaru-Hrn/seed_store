@@ -9,6 +9,7 @@ import os
 import models
 import schemas
 from database import engine, get_db
+from typing import List, Optional
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -51,15 +52,22 @@ def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)
     return db_product
 
 
+# Эндпоинт для получения списка товаров
 @app.get("/api/products/", response_model=List[schemas.ProductResponse])
-def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(models.Product).offset(skip).limit(limit).all()
+def read_products(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(models.Product)
+    if search:
+        query = query.filter(models.Product.title.ilike(f"%{search}%"))
+    return query.offset(skip).limit(limit).all()
 
 # Эндпоинт для получения общего количества товаров (для пагинации)
 @app.get("/api/products/count")
-def count_products(db: Session = Depends(get_db)):
-    total = db.query(models.Product).count()
-    return {"total": total}
+def count_products(search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(models.Product)
+    if search:
+        # ilike обеспечивает поиск без учета регистра букв
+        query = query.filter(models.Product.title.ilike(f"%{search}%"))
+    return {"total": query.count()}
 
 
 @app.delete("/api/products/{product_id}")
