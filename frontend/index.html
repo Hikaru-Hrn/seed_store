@@ -21,6 +21,14 @@
 
     <main class="container mx-auto mt-8 p-4 min-h-screen">
         <h2 class="text-xl font-bold text-gray-800 mb-6">Каталог товаров</h2>
+        <div class="mb-6 flex gap-2 max-w-2xl">
+            <input type="text" id="search-input" placeholder="Поиск по названию (например, 'Кукуруза')..."
+                   class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 outline-none shadow-sm"
+                   onkeypress="if(event.key === 'Enter') doSearch()">
+            <button onclick="doSearch()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold shadow transition-colors">
+                Искать
+            </button>
+        </div>
         <div id="catalog" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             </div>
 
