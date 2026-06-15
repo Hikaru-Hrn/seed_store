@@ -7,70 +7,136 @@
 </head>
 <body class="bg-gray-100 font-sans p-8">
 
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+    <div id="login-screen" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md mt-20">
+        <h2 class="text-2xl font-bold text-center mb-6">Вход в Админку</h2>
+        <input type="password" id="admin-pwd" placeholder="Пароль" class="w-full border p-2 rounded mb-4">
+        <button onclick="login()" class="w-full bg-blue-600 text-white font-bold py-2 rounded">Войти</button>
+    </div>
+
+    <div id="admin-panel" class="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-md hidden">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800">⚙️ Панель Администратора</h1>
-            <a href="/" class="text-blue-500 hover:underline">Вернуться в магазин</a>
+            <button onclick="logout()" class="text-red-500 hover:underline">Выйти</button>
         </div>
 
-        <h2 class="text-xl font-semibold mb-4">Добавить новый товар</h2>
-
-        <form id="add-product-form" class="space-y-4">
-            <div>
-                <label class="block text-gray-700">Название товара</label>
-                <input type="text" id="p-title" class="w-full border p-2 rounded" required>
+        <h2 class="text-xl font-semibold mb-4 text-green-700">Добавить товар</h2>
+        <form id="add-product-form" class="space-y-4 bg-gray-50 p-4 rounded border">
+            <input type="text" id="p-title" placeholder="Название" class="w-full border p-2 rounded" required>
+            <textarea id="p-desc" placeholder="Описание" class="w-full border p-2 rounded" required></textarea>
+            <div class="grid grid-cols-3 gap-4">
+                <input type="number" id="p-price" placeholder="Цена (руб)" class="w-full border p-2 rounded" required>
+                <input type="number" id="p-stock" placeholder="Кол-во на складе" class="w-full border p-2 rounded" required>
+                <input type="file" id="p-image" class="w-full border p-2 rounded bg-white">
             </div>
-            <div>
-                <label class="block text-gray-700">Описание</label>
-                <textarea id="p-desc" class="w-full border p-2 rounded" required></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-700">Цена (руб.)</label>
-                    <input type="number" id="p-price" class="w-full border p-2 rounded" required>
-                </div>
-                <div>
-                    <label class="block text-gray-700">Остаток на складе (шт.)</label>
-                    <input type="number" id="p-stock" class="w-full border p-2 rounded" required>
-                </div>
-            </div>
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">
-                Добавить товар в базу
-            </button>
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Добавить товар</button>
         </form>
 
-        <div id="status-msg" class="mt-4 text-center font-bold hidden"></div>
+        <h2 class="text-xl font-semibold mt-8 mb-4">Список товаров</h2>
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-2 border">ID</th>
+                    <th class="p-2 border">Фото</th>
+                    <th class="p-2 border">Название</th>
+                    <th class="p-2 border">Цена</th>
+                    <th class="p-2 border">Остаток</th>
+                    <th class="p-2 border">Действия</th>
+                </tr>
+            </thead>
+            <tbody id="products-table"></tbody>
+        </table>
     </div>
 
     <script>
+        // Проверка авторизации
+        if (localStorage.getItem('adminToken')) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminProducts();
+        }
+
+        async function login() {
+            const pwd = document.getElementById('admin-pwd').value;
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pwd })
+            });
+            if (res.ok) {
+                localStorage.setItem('adminToken', 'true');
+                location.reload();
+            } else {
+                alert('Неверный пароль!'); // В нашем коде пароль: admin123
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            location.reload();
+        }
+
+        async function loadAdminProducts() {
+            const res = await fetch('/api/products/');
+            const products = await res.json();
+            const tbody = document.getElementById('products-table');
+            tbody.innerHTML = '';
+
+            products.forEach(p => {
+                const img = p.image_url ? `<img src="${p.image_url}" class="h-10 w-10 object-cover rounded">` : '-';
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2 border">${p.id}</td>
+                        <td class="p-2 border">${img}</td>
+                        <td class="p-2 border">${p.title}</td>
+                        <td class="p-2 border">${p.price} руб.</td>
+                        <td class="p-2 border">${p.stock_quantity} шт.</td>
+                        <td class="p-2 border space-x-2">
+                            <button onclick="deleteProduct(${p.id})" class="bg-red-500 text-white px-3 py-1 rounded">Удалить</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
         document.getElementById('add-product-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Останавливаем перезагрузку страницы
+            e.preventDefault();
+
+            let imageUrl = null;
+            const fileInput = document.getElementById('p-image');
+
+            // Если выбрано фото, сначала загружаем его
+            if (fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const uploadRes = await fetch('/api/upload/', { method: 'POST', body: formData });
+                const uploadData = await uploadRes.json();
+                imageUrl = uploadData.image_url;
+            }
 
             const product = {
                 title: document.getElementById('p-title').value,
                 description: document.getElementById('p-desc').value,
                 price: parseFloat(document.getElementById('p-price').value),
-                stock_quantity: parseInt(document.getElementById('p-stock').value)
+                stock_quantity: parseInt(document.getElementById('p-stock').value),
+                image_url: imageUrl
             };
 
-            const res = await fetch('/api/products/', {
+            await fetch('/api/products/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(product)
             });
 
-            const msg = document.getElementById('status-msg');
-            msg.classList.remove('hidden');
-
-            if (res.ok) {
-                msg.textContent = 'Товар успешно добавлен!';
-                msg.className = 'mt-4 text-center font-bold text-green-600 block';
-                document.getElementById('add-product-form').reset();
-            } else {
-                msg.textContent = 'Ошибка при добавлении товара.';
-                msg.className = 'mt-4 text-center font-bold text-red-600 block';
-            }
+            document.getElementById('add-product-form').reset();
+            loadAdminProducts();
         });
+
+        async function deleteProduct(id) {
+            if (confirm('Точно удалить?')) {
+                await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                loadAdminProducts();
+            }
+        }
     </script>
 </body>
 </html>

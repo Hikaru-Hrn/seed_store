@@ -17,7 +17,8 @@ class Product(Base):
     description = Column(Text)
     price = Column(Float)
     stock_quantity = Column(Integer, default=0)
-    category_id = Column(Integer, ForeignKey("categories.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    image_url = Column(String(255), nullable=True)  # НОВОЕ ПОЛЕ ДЛЯ ФОТО
 
     category = relationship("Category", back_populates="products")
 
@@ -27,8 +28,7 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String(100))
     customer_phone = Column(String(20))
-    status = Column(String(50), default="Новый")  # Статусы: Новый, В работе, Выполнен
-
+    status = Column(String(50), default="Новый")
     items = relationship("OrderItem", back_populates="order")
 
 
@@ -38,6 +38,5 @@ class OrderItem(Base):
     order_id = Column(Integer, ForeignKey("orders.id"))
     product_id = Column(Integer, ForeignKey("products.id"))
     quantity = Column(Integer)
-
     order = relationship("Order", back_populates="items")
     product = relationship("Product")

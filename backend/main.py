@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
+import shutil
+import os
 
 import models
 import schemas
@@ -12,8 +14,34 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Дом Семян API")
 
+# Папка для загрузки фото
+os.makedirs("../frontend/uploads", exist_ok=True)
 
-# --- API ТОВАРОВ ---
+from pydantic import BaseModel
+
+
+class LoginData(BaseModel):
+    password: str
+
+
+# 1. АВТОРИЗАЦИЯ АДМИНА
+@app.post("/api/admin/login")
+def login(data: LoginData):
+    if data.password == "admin123":  # Пароль для входа
+        return {"token": "valid_token"}
+    raise HTTPException(status_code=401, detail="Неверный пароль")
+
+
+# 2. ЗАГРУЗКА ФОТО
+@app.post("/api/upload/")
+def upload_image(file: UploadFile = File(...)):
+    file_location = f"../frontend/uploads/{file.filename}"
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"image_url": f"/static/uploads/{file.filename}"}
+
+
+# 3. CRUD ТОВАРОВ (Создание, Чтение, Обновление, Удаление)
 @app.post("/api/products/", response_model=schemas.ProductResponse)
 def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
     db_product = models.Product(**product.model_dump())
@@ -28,21 +56,38 @@ def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     return db.query(models.Product).offset(skip).limit(limit).all()
 
 
-# --- API ЗАКАЗОВ ---
+@app.delete("/api/products/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if product:
+        db.delete(product)
+        db.commit()
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Товар не найден")
+
+
+@app.put("/api/products/{product_id}")
+def update_product(product_id: int, product: schemas.ProductCreate, db: Session = Depends(get_db)):
+    db_product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    for key, value in product.model_dump().items():
+        setattr(db_product, key, value)
+    db.commit()
+    return db_product
+
+
+# --- ЗАКАЗЫ ---
 @app.post("/api/orders/")
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
-    # 1. Создаем запись о заказе
     db_order = models.Order(customer_name=order.customer_name, customer_phone=order.customer_phone)
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
 
-    # 2. Добавляем товары в заказ и списываем их со склада
     for item in order.items:
         db_item = models.OrderItem(order_id=db_order.id, product_id=item.product_id, quantity=item.quantity)
         db.add(db_item)
-
-        # Уменьшаем количество на складе
         product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
         if product and product.stock_quantity >= item.quantity:
             product.stock_quantity -= item.quantity
