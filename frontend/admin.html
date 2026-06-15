@@ -9,46 +9,90 @@
 
     <div id="login-screen" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md mt-20">
         <h2 class="text-2xl font-bold text-center mb-6">Вход в Админку</h2>
-        <input type="password" id="admin-pwd" placeholder="Пароль" class="w-full border p-2 rounded mb-4">
+        <input type="password" id="admin-pwd" placeholder="Пароль (admin123)" class="w-full border p-2 rounded mb-4">
         <button onclick="login()" class="w-full bg-blue-600 text-white font-bold py-2 rounded">Войти</button>
     </div>
 
-    <div id="admin-panel" class="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-md hidden">
+    <div id="admin-panel" class="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-md hidden">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800">⚙️ Панель Администратора</h1>
-            <button onclick="logout()" class="text-red-500 hover:underline">Выйти</button>
+            <div class="space-x-4">
+                <a href="/" class="text-blue-500 hover:underline font-bold">В магазин</a>
+                <button onclick="logout()" class="text-red-500 hover:underline">Выйти</button>
+            </div>
         </div>
 
-        <h2 class="text-xl font-semibold mb-4 text-green-700">Добавить товар</h2>
-        <form id="add-product-form" class="space-y-4 bg-gray-50 p-4 rounded border">
-            <input type="text" id="p-title" placeholder="Название" class="w-full border p-2 rounded" required>
-            <textarea id="p-desc" placeholder="Описание" class="w-full border p-2 rounded" required></textarea>
-            <div class="grid grid-cols-3 gap-4">
-                <input type="number" id="p-price" placeholder="Цена (руб)" class="w-full border p-2 rounded" required>
-                <input type="number" id="p-stock" placeholder="Кол-во на складе" class="w-full border p-2 rounded" required>
-                <input type="file" id="p-image" class="w-full border p-2 rounded bg-white">
-            </div>
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Добавить товар</button>
-        </form>
+        <h2 class="text-xl font-semibold mb-4">Каталог товаров</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse bg-white shadow-sm">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2 border">ID</th>
+                        <th class="p-2 border">Фото</th>
+                        <th class="p-2 border">Название</th>
+                        <th class="p-2 border">Цена</th>
+                        <th class="p-2 border">Остаток</th>
+                        <th class="p-2 border">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table"></tbody>
+            </table>
+        </div>
 
-        <h2 class="text-xl font-semibold mt-8 mb-4">Список товаров</h2>
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-200">
-                    <th class="p-2 border">ID</th>
-                    <th class="p-2 border">Фото</th>
-                    <th class="p-2 border">Название</th>
-                    <th class="p-2 border">Цена</th>
-                    <th class="p-2 border">Остаток</th>
-                    <th class="p-2 border">Действия</th>
-                </tr>
-            </thead>
-            <tbody id="products-table"></tbody>
-        </table>
+        <div id="admin-pagination" class="flex justify-center items-center mt-6 space-x-4"></div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Редактировать товар</h2>
+                <button onclick="closeEditModal()" class="text-red-500 font-bold text-2xl">&times;</button>
+            </div>
+
+            <form id="edit-product-form" class="space-y-4">
+                <input type="hidden" id="e-id">
+
+                <div>
+                    <label class="block text-sm text-gray-600">Название</label>
+                    <input type="text" id="e-title" class="w-full border p-2 rounded" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-600">Описание</label>
+                    <textarea id="e-desc" class="w-full border p-2 rounded h-24" required></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600">Цена (руб)</label>
+                        <input type="number" id="e-price" class="w-full border p-2 rounded" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600">Остаток</label>
+                        <input type="number" id="e-stock" class="w-full border p-2 rounded" required>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                    <label class="block text-sm font-bold text-blue-800 mb-2">Загрузить новое фото</label>
+                    <input type="file" id="e-image" accept="image/*" class="w-full bg-white border p-2 rounded">
+                    <p class="text-xs text-gray-500 mt-1">Оставьте пустым, чтобы сохранить текущее фото.</p>
+                </div>
+
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">
+                    Сохранить изменения
+                </button>
+            </form>
+        </div>
     </div>
 
     <script>
-        // Проверка авторизации
+        // Глобальные переменные для пагинации админки
+        window.currentProducts = [];
+        let currentAdminPage = 1;
+        const adminLimit = 20; // Оптимальное количество строк для таблицы
+        let totalAdminPages = 1;
+
         if (localStorage.getItem('adminToken')) {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('admin-panel').classList.remove('hidden');
@@ -65,9 +109,7 @@
             if (res.ok) {
                 localStorage.setItem('adminToken', 'true');
                 location.reload();
-            } else {
-                alert('Неверный пароль!'); // В нашем коде пароль: admin123
-            }
+            } else { alert('Неверный пароль!'); }
         }
 
         function logout() {
@@ -75,68 +117,136 @@
             location.reload();
         }
 
-        async function loadAdminProducts() {
-            const res = await fetch('/api/products/');
-            const products = await res.json();
+        async function loadAdminProducts(page = 1) {
+            currentAdminPage = page;
+            const skip = (page - 1) * adminLimit;
+
+            // 1. Получаем общее количество товаров (эндпоинт мы уже делали)
+            const countRes = await fetch('/api/products/count');
+            const countData = await countRes.json();
+            totalAdminPages = Math.ceil(countData.total / adminLimit);
+
+            // 2. Получаем товары для текущей страницы
+            const res = await fetch(`/api/products/?skip=${skip}&limit=${adminLimit}`);
+            window.currentProducts = await res.json();
+
             const tbody = document.getElementById('products-table');
             tbody.innerHTML = '';
 
-            products.forEach(p => {
-                const img = p.image_url ? `<img src="${p.image_url}" class="h-10 w-10 object-cover rounded">` : '-';
+            window.currentProducts.forEach(p => {
+                const img = p.image_url ? `<img src="${p.image_url}" class="h-12 w-12 object-cover rounded">` : '<span class="text-xs text-gray-400">Нет фото</span>';
+
+                // Экранируем кавычки для безопасной вставки в HTML
+                const safeTitle = p.title.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+
                 tbody.innerHTML += `
-                    <tr>
-                        <td class="p-2 border">${p.id}</td>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-2 border text-gray-500">#${p.id}</td>
                         <td class="p-2 border">${img}</td>
-                        <td class="p-2 border">${p.title}</td>
-                        <td class="p-2 border">${p.price} руб.</td>
+                        <td class="p-2 border font-semibold">${safeTitle}</td>
+                        <td class="p-2 border text-green-600 font-bold">${p.price} ₽</td>
                         <td class="p-2 border">${p.stock_quantity} шт.</td>
-                        <td class="p-2 border space-x-2">
-                            <button onclick="deleteProduct(${p.id})" class="bg-red-500 text-white px-3 py-1 rounded">Удалить</button>
+                        <td class="p-2 border min-w-[180px]">
+                            <button onclick="openEditModal(${p.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm mr-2 transition">Изменить</button>
+                            <button onclick="deleteProduct(${p.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition">Удалить</button>
                         </td>
                     </tr>
                 `;
             });
+
+            renderAdminPagination();
         }
 
-        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+        function renderAdminPagination() {
+            const pagination = document.getElementById('admin-pagination');
+            pagination.innerHTML = '';
+
+            if (totalAdminPages <= 1) return;
+
+            // Кнопка Назад
+            if (currentAdminPage > 1) {
+                pagination.innerHTML += `<button onclick="loadAdminProducts(${currentAdminPage - 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold transition">← Назад</button>`;
+            } else {
+                pagination.innerHTML += `<button disabled class="px-4 py-2 bg-gray-100 text-gray-400 rounded font-bold cursor-not-allowed">← Назад</button>`;
+            }
+
+            // Индикатор страниц
+            pagination.innerHTML += `<span class="font-bold text-gray-700 px-4">Стр. ${currentAdminPage} из ${totalAdminPages}</span>`;
+
+            // Кнопка Вперед
+            if (currentAdminPage < totalAdminPages) {
+                pagination.innerHTML += `<button onclick="loadAdminProducts(${currentAdminPage + 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold transition">Вперед →</button>`;
+            } else {
+                pagination.innerHTML += `<button disabled class="px-4 py-2 bg-gray-100 text-gray-400 rounded font-bold cursor-not-allowed">Вперед →</button>`;
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('Точно удалить этот товар?')) {
+                await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                loadAdminProducts(currentAdminPage); // Перезагружаем текущую страницу
+            }
+        }
+
+        // --- ЛОГИКА РЕДАКТИРОВАНИЯ ---
+        function openEditModal(id) {
+            const p = window.currentProducts.find(x => x.id === id);
+            if(!p) return;
+
+            document.getElementById('e-id').value = p.id;
+            document.getElementById('e-title').value = p.title;
+            document.getElementById('e-desc').value = p.description;
+            document.getElementById('e-price').value = p.price;
+            document.getElementById('e-stock').value = p.stock_quantity;
+            document.getElementById('e-image').value = '';
+
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        document.getElementById('edit-product-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            let imageUrl = null;
-            const fileInput = document.getElementById('p-image');
+            const id = document.getElementById('e-id').value;
+            const originalProduct = window.currentProducts.find(x => x.id == id);
+            let finalImageUrl = originalProduct.image_url;
 
-            // Если выбрано фото, сначала загружаем его
+            const fileInput = document.getElementById('e-image');
+
             if (fileInput.files.length > 0) {
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 const uploadRes = await fetch('/api/upload/', { method: 'POST', body: formData });
                 const uploadData = await uploadRes.json();
-                imageUrl = uploadData.image_url;
+                finalImageUrl = uploadData.image_url;
             }
 
-            const product = {
-                title: document.getElementById('p-title').value,
-                description: document.getElementById('p-desc').value,
-                price: parseFloat(document.getElementById('p-price').value),
-                stock_quantity: parseInt(document.getElementById('p-stock').value),
-                image_url: imageUrl
+            const updatedProduct = {
+                title: document.getElementById('e-title').value,
+                description: document.getElementById('e-desc').value,
+                price: parseFloat(document.getElementById('e-price').value),
+                stock_quantity: parseInt(document.getElementById('e-stock').value),
+                image_url: finalImageUrl,
+                category_id: originalProduct.category_id
             };
 
-            await fetch('/api/products/', {
-                method: 'POST',
+            const res = await fetch(`/api/products/${id}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(product)
+                body: JSON.stringify(updatedProduct)
             });
 
-            document.getElementById('add-product-form').reset();
-            loadAdminProducts();
-        });
-
-        async function deleteProduct(id) {
-            if (confirm('Точно удалить?')) {
-                await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                loadAdminProducts();
+            if(res.ok) {
+                closeEditModal();
+                // Перезагружаем именно ту страницу, на которой находились
+                loadAdminProducts(currentAdminPage);
+            } else {
+                alert("Ошибка при сохранении!");
             }
-        }
+        });
     </script>
 </body>
 </html>
