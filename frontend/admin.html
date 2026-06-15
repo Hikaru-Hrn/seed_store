@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админка - Дом Семян</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans p-8">
+
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">⚙️ Панель Администратора</h1>
+            <a href="/" class="text-blue-500 hover:underline">Вернуться в магазин</a>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-4">Добавить новый товар</h2>
+
+        <form id="add-product-form" class="space-y-4">
+            <div>
+                <label class="block text-gray-700">Название товара</label>
+                <input type="text" id="p-title" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label class="block text-gray-700">Описание</label>
+                <textarea id="p-desc" class="w-full border p-2 rounded" required></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700">Цена (руб.)</label>
+                    <input type="number" id="p-price" class="w-full border p-2 rounded" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Остаток на складе (шт.)</label>
+                    <input type="number" id="p-stock" class="w-full border p-2 rounded" required>
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">
+                Добавить товар в базу
+            </button>
+        </form>
+
+        <div id="status-msg" class="mt-4 text-center font-bold hidden"></div>
+    </div>
+
+    <script>
+        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Останавливаем перезагрузку страницы
+
+            const product = {
+                title: document.getElementById('p-title').value,
+                description: document.getElementById('p-desc').value,
+                price: parseFloat(document.getElementById('p-price').value),
+                stock_quantity: parseInt(document.getElementById('p-stock').value)
+            };
+
+            const res = await fetch('/api/products/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+
+            const msg = document.getElementById('status-msg');
+            msg.classList.remove('hidden');
+
+            if (res.ok) {
+                msg.textContent = 'Товар успешно добавлен!';
+                msg.className = 'mt-4 text-center font-bold text-green-600 block';
+                document.getElementById('add-product-form').reset();
+            } else {
+                msg.textContent = 'Ошибка при добавлении товара.';
+                msg.className = 'mt-4 text-center font-bold text-red-600 block';
+            }
+        });
+    </script>
+</body>
+</html>

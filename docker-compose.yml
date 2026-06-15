@@ -3,6 +3,7 @@ version: '3.8'
 services:
   db:
     image: mysql:8.0
+    container_name: seed_store_db
     restart: always
     environment:
       MYSQL_DATABASE: seed_store_db
@@ -16,6 +17,7 @@ services:
 
   api:
     build: ./backend
+    container_name: seed_store_api
     restart: always
     ports:
       - "8000:8000"
@@ -23,6 +25,10 @@ services:
       - db
     environment:
       - DATABASE_URL=mysql+pymysql://user:password@db:3306/seed_store_db
+    volumes:
+      # Пробрасываем папку с фронтендом внутрь контейнера,
+      # чтобы FastAPI мог раздавать файл index.html
+      - ./frontend:/frontend
 
 volumes:
   db_data:

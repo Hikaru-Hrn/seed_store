@@ -3,55 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <title>Дом Семян - Каталог</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
-        .header { text-align: center; color: #2c3e50; }
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn { background: #27ae60; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; width: 100%; }
-        .btn:hover { background: #219150; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1 class="header">🌱 Интернет-магазин "Дом Семян"</h1>
-    <div class="products-grid" id="catalog">
+<body class="bg-gray-100 font-sans">
+
+    <nav class="bg-green-600 p-4 text-white shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🌱 Дом Семян</h1>
+            <div>
+                <button onclick="toggleCart()" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-semibold flex items-center">
+                    🛒 Корзина (<span id="cart-count">0</span>)
+                </button>
+            </div>
         </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4">
+        <h2 class="text-xl font-bold text-gray-800 mb-6">Каталог товаров</h2>
+        <div id="catalog" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            </div>
+    </main>
+
+    <div id="cart-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Ваша корзина</h2>
+                <button onclick="toggleCart()" class="text-red-500 font-bold text-xl">&times;</button>
+            </div>
+
+            <ul id="cart-items" class="mb-4 space-y-2 border-b pb-4"></ul>
+            <p class="font-bold text-lg mb-4 text-right">Итого: <span id="cart-total">0</span> руб.</p>
+
+            <div class="space-y-3">
+                <input type="text" id="customer-name" placeholder="Ваше Имя" class="w-full border p-2 rounded">
+                <input type="text" id="customer-phone" placeholder="Ваш Телефон" class="w-full border p-2 rounded">
+                <button onclick="submitOrder()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Оформить заказ</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Функция загрузки товаров из нашего API
+        let cart = [];
+
+        // 1. Загрузка товаров из базы
         async function loadProducts() {
-            try {
-                const response = await fetch('/api/products/');
-                const products = await response.json();
-                const catalog = document.getElementById('catalog');
+            const res = await fetch('/api/products/');
+            const products = await res.json();
+            const catalog = document.getElementById('catalog');
+            catalog.innerHTML = '';
 
-                if (products.length === 0) {
-                    catalog.innerHTML = '<p>Товаров пока нет. Добавьте их через админку (/docs).</p>';
-                    return;
-                }
+            products.forEach(p => {
+                catalog.innerHTML += `
+                    <div class="bg-white rounded-lg shadow-md p-5 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">${p.title}</h3>
+                            <p class="text-gray-600 text-sm mt-2 h-16 overflow-hidden">${p.description}</p>
+                            <p class="text-green-600 font-bold text-xl mt-4">${p.price} руб.</p>
+                            <p class="text-xs text-gray-500 mt-1">В наличии: ${p.stock_quantity} шт.</p>
+                        </div>
+                        <button onclick="addToCart(${p.id}, '${p.title}', ${p.price})"
+                                class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors">
+                            В корзину
+                        </button>
+                    </div>
+                `;
+            });
+        }
 
-                products.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `
-                        <h3>${product.title}</h3>
-                        <p>${product.description}</p>
-                        <p><strong>Цена:</strong> ${product.price} руб.</p>
-                        <p><em>В наличии: ${product.stock_quantity} шт.</em></p>
-                        <button class="btn" onclick="buy(${product.id})">В корзину</button>
-                    `;
-                    catalog.appendChild(card);
-                });
-            } catch (error) {
-                console.error('Ошибка загрузки товаров:', error);
+        // 2. Логика корзины
+        function addToCart(id, title, price) {
+            const existing = cart.find(i => i.product_id === id);
+            if (existing) existing.quantity++;
+            else cart.push({ product_id: id, title, price, quantity: 1 });
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.reduce((sum, i) => sum + i.quantity, 0);
+
+            const list = document.getElementById('cart-items');
+            list.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                list.innerHTML += `<li class="flex justify-between text-sm">
+                    <span>${item.title} (x${item.quantity})</span>
+                    <span class="font-bold">${item.price * item.quantity} руб.</span>
+                </li>`;
+            });
+            document.getElementById('cart-total').innerText = total;
+        }
+
+        function toggleCart() {
+            document.getElementById('cart-modal').classList.toggle('hidden');
+        }
+
+        // 3. Отправка заказа на бэкенд
+        async function submitOrder() {
+            if (cart.length === 0) return alert('Корзина пуста!');
+            const name = document.getElementById('customer-name').value;
+            const phone = document.getElementById('customer-phone').value;
+            if (!name || !phone) return alert('Введите имя и телефон!');
+
+            const orderData = {
+                customer_name: name,
+                customer_phone: phone,
+                items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+            };
+
+            const res = await fetch('/api/orders/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+
+            if (res.ok) {
+                alert('Заказ успешно оформлен!');
+                cart = [];
+                updateCartUI();
+                toggleCart();
+                loadProducts(); // Обновляем остатки
             }
         }
 
-        function buy(id) {
-            alert('Товар ' + id + ' добавлен в корзину! (Логика заказа будет добавлена позже)');
-        }
-
-        // Запускаем при открытии страницы
         loadProducts();
     </script>
 </body>
