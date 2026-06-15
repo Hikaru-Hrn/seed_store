@@ -61,23 +61,41 @@
         const limit = 12;
         let totalPages = 1;
 
+        // НОВАЯ ПЕРЕМЕННАЯ ДЛЯ ПОИСКА
+        let currentSearch = "";
+
+        // НОВАЯ ФУНКЦИЯ ПОИСКА
+        function doSearch() {
+            currentSearch = document.getElementById('search-input').value.trim();
+            loadProducts(1); // При новом поиске всегда начинаем с 1-й страницы
+        }
+
         async function loadProducts(page = 1) {
             currentPage = page;
             const skip = (page - 1) * limit;
 
             try {
-                const countRes = await fetch('/api/products/count');
+                // Формируем URL-адреса с учетом того, введен ли текст в поиск
+                let urlCount = '/api/products/count';
+                let urlProducts = `/api/products/?skip=${skip}&limit=${limit}`;
+
+                if (currentSearch) {
+                    urlCount += `?search=${encodeURIComponent(currentSearch)}`;
+                    urlProducts += `&search=${encodeURIComponent(currentSearch)}`;
+                }
+
+                const countRes = await fetch(urlCount);
                 const countData = await countRes.json();
                 totalPages = Math.ceil(countData.total / limit);
 
-                const res = await fetch(`/api/products/?skip=${skip}&limit=${limit}`);
+                const res = await fetch(urlProducts);
                 window.currentStoreProducts = await res.json();
 
                 const catalog = document.getElementById('catalog');
                 catalog.innerHTML = '';
 
                 if (window.currentStoreProducts.length === 0) {
-                    catalog.innerHTML = '<p class="text-gray-500 col-span-full">Товаров пока нет.</p>';
+                    catalog.innerHTML = `<p class="text-gray-500 col-span-full font-bold text-lg">По запросу «${currentSearch}» ничего не найдено.</p>`;
                 }
 
                 window.currentStoreProducts.forEach(p => {
@@ -89,7 +107,7 @@
                             <div>
                                 <img src="${img}" alt="${safeAlt}" class="w-full h-48 object-cover rounded-lg mb-4 border">
                                 <h3 class="text-lg font-bold text-gray-800 leading-tight">${p.title}</h3>
-                                <p class="text-gray-500 text-sm mt-2 h-16 overflow-y-auto pr-1 text-justify">${p.description}</p>
+                                <p class="text-gray-500 text-sm mt-2 h-16 overflow-y-auto pr-1 text-justify scrollbar-thin">${p.description}</p>
                                 <p class="text-green-600 font-extrabold text-2xl mt-4">${p.price} ₽</p>
                                 <p class="text-xs font-semibold ${p.stock_quantity > 0 ? 'text-gray-500' : 'text-red-500'} mt-1">
                                     ${p.stock_quantity > 0 ? `В наличии: ${p.stock_quantity} шт.` : 'Нет в наличии'}
