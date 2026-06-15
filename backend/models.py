@@ -20,3 +20,24 @@ class Product(Base):
     category_id = Column(Integer, ForeignKey("categories.id"))
 
     category = relationship("Category", back_populates="products")
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True, index=True)
+    customer_name = Column(String(100))
+    customer_phone = Column(String(20))
+    status = Column(String(50), default="Новый")  # Статусы: Новый, В работе, Выполнен
+
+    items = relationship("OrderItem", back_populates="order")
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer)
+
+    order = relationship("Order", back_populates="items")
+    product = relationship("Product")

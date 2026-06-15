@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Дом Семян - Каталог</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+        .header { text-align: center; color: #2c3e50; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn { background: #27ae60; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; width: 100%; }
+        .btn:hover { background: #219150; }
+    </style>
+</head>
+<body>
+    <h1 class="header">🌱 Интернет-магазин "Дом Семян"</h1>
+    <div class="products-grid" id="catalog">
+        </div>
+
+    <script>
+        // Функция загрузки товаров из нашего API
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products/');
+                const products = await response.json();
+                const catalog = document.getElementById('catalog');
+
+                if (products.length === 0) {
+                    catalog.innerHTML = '<p>Товаров пока нет. Добавьте их через админку (/docs).</p>';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${product.title}</h3>
+                        <p>${product.description}</p>
+                        <p><strong>Цена:</strong> ${product.price} руб.</p>
+                        <p><em>В наличии: ${product.stock_quantity} шт.</em></p>
+                        <button class="btn" onclick="buy(${product.id})">В корзину</button>
+                    `;
+                    catalog.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки товаров:', error);
+            }
+        }
+
+        function buy(id) {
+            alert('Товар ' + id + ' добавлен в корзину! (Логика заказа будет добавлена позже)');
+        }
+
+        // Запускаем при открытии страницы
+        loadProducts();
+    </script>
+</body>
+</html>
